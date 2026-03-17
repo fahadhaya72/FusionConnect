@@ -46,9 +46,27 @@ export const errorHandler = (
     error = { ...error, message, statusCode: 401 };
   }
 
+  // Prisma errors
+  if (err.name === 'PrismaClientKnownRequestError') {
+    const message = 'Database operation failed';
+    error = { ...error, message, statusCode: 400 };
+  }
+
+  if (err.name === 'PrismaClientUnknownRequestError') {
+    const message = 'Database request failed';
+    error = { ...error, message, statusCode: 500 };
+  }
+
   res.status(error.statusCode || 500).json({
     success: false,
     error: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    // Only include stack trace in development
+    ...(process.env.NODE_ENV === 'development' && { 
+      stack: err.stack,
+      details: {
+        name: err.name,
+        statusCode: error.statusCode
+      }
+    })
   });
 };

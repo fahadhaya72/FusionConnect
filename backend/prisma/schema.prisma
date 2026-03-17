@@ -14,7 +14,7 @@ generator client {
 
 datasource db {
 
-  provider = "sqlite"
+  provider = "postgresql"
 
   url      = env("DATABASE_URL")
 
@@ -62,6 +62,8 @@ model User {
 
 
 
+  @@index([createdAt])                // For sorting users by date
+  @@index([verified])                 // For finding unverified users
   @@map("users")
 
 }
@@ -146,6 +148,9 @@ model Message {
 
 
 
+  @@index([chatId, createdAt])        // For chat message retrieval (most critical)
+  @@index([senderId])                 // For user's message history
+  @@index([createdAt])                // For global message sorting
   @@map("messages")
 
 }
@@ -267,6 +272,28 @@ model Post {
 
 
   @@map("posts")
+
+}
+
+
+
+model VerificationCode {
+
+  id        String   @id @default(uuid()) @map("_id")
+
+  email     String   @unique
+
+  code      String
+
+  userId    String
+
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+
+
+  @@map("verification_codes")
 
 }
 

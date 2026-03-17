@@ -4,7 +4,14 @@ import jwt from 'jsonwebtoken';
 
 import prisma from '../config/database';
 
+import logger from '../utils/logger';
 
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+});
 
 interface AuthenticatedSocket extends Socket {
 
@@ -24,15 +31,13 @@ export const initializeSocket = (io: Server) => {
 
       const token = socket.handshake.auth.token;
 
-
-
       if (!token) {
+
+        logger.warn('Socket connection attempt without token', { ip: socket.handshake.address });
 
         return next(new Error('Authentication token required'));
 
       }
-
-
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
 
@@ -44,21 +49,23 @@ export const initializeSocket = (io: Server) => {
 
       });
 
-
-
       if (!user) {
+
+        logger.warn('Socket connection attempt with invalid user', { userId: decoded.id });
 
         return next(new Error('User not found'));
 
       }
 
-
-
       socket.userId = user.id;
+
+      logger.info(`User ${user.id} authenticated for socket connection`);
 
       next();
 
     } catch (error) {
+
+      logger.error('Socket authentication failed', { error, ip: socket.handshake.address });
 
       next(new Error('Authentication failed'));
 
@@ -68,9 +75,10 @@ export const initializeSocket = (io: Server) => {
 
 
 
+
   io.on('connection', (socket: AuthenticatedSocket) => {
 
-    console.log(`User ${socket.userId} connected`);
+    logger.info(`User ${socket.userId} connected`);
 
 
 
@@ -110,7 +118,7 @@ export const initializeSocket = (io: Server) => {
 
           socket.join(`chat_${chatId}`);
 
-          console.log(`User ${socket.userId} joined chat ${chatId}`);
+          logger.info(`User ${socket.userId} joined chat ${chatId}`);
 
         }
 
@@ -130,7 +138,7 @@ export const initializeSocket = (io: Server) => {
 
       socket.leave(`chat_${chatId}`);
 
-      console.log(`User ${socket.userId} left chat ${chatId}`);
+      logger.info(`User ${socket.userId} left chat ${chatId}`);
 
     });
 
@@ -220,7 +228,7 @@ export const initializeSocket = (io: Server) => {
 
       } catch (error) {
 
-        console.error('Send message error:', error);
+        logger.error('Send message error:', error);
 
         socket.emit('error', 'Failed to send message');
 

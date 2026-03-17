@@ -10,6 +10,8 @@ import { generateToken, generateRefreshToken } from '../utils/jwt';
 
 import { sendVerificationEmail } from '../utils/email';
 
+import logger from '../utils/logger';
+
 
 
 interface AuthRequest extends Request {
@@ -31,127 +33,76 @@ const generateVerificationCode = (): string => {
 
 
 export const register = async (req: Request, res: Response) => {
-
   try {
-
     const { name, email, password } = req.body;
 
-
-
-    // Check if user exists
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-
-    if (existingUser) {
-
-      return res.status(400).json({
-
-        success: false,
-
-        error: 'User already exists'
-
-      });
-
-    }
-
-
-
-    // Hash password
-
-    const hashedPassword = await hashPassword(password);
-
-
-
-    // Generate verification code
-
+    // Generate verification code first
     const verificationCode = generateVerificationCode();
 
-
-
-    // Create user
-
-    const user = await prisma.user.create({
-
-      data: {
-
-        name,
-
-        email,
-
-        password: hashedPassword,
-
-        verified: false
-
-      },
-
-      select: { id: true, name: true, email: true, verified: true }
-
-    });
-
-
-
-    // Send verification email
-
-    try {
-
-      await sendVerificationEmail(email, verificationCode);
-
-    } catch (emailError) {
-
-      console.error('Email sending failed:', emailError);
-
-      // Don't fail registration if email fails
-
-    }
-
-
-
-    // Store verification code temporarily (in production, use Redis or similar)
-
-    // For now, we'll store it in a simple in-memory store
-
-    global.verificationCodes = global.verificationCodes || {};
-
-    global.verificationCodes[email] = {
-
-      code: verificationCode,
-
-      expires: Date.now() + 10 * 60 * 1000, // 10 minutes
-
-      userId: user.id
-
-    };
-
-
-
-    res.status(201).json({
-
-      success: true,
-
-      data: {
-
-        user,
-
-        message: 'Registration successful. Please check your email for verification code.'
-
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if user exists within transaction
+      const existingUser = await tx.user.findUnique({ where: { email } });
+      if (existingUser) {
+        throw new Error('User already exists');
       }
 
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          verified: false
+        },
+        select: { id: true, name: true, email: true, verified: true }
+      });
+
+      // Store verification code
+      await tx.verificationCode.create({
+        data: {
+          email,
+          code: verificationCode,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+        }
+      });
+
+      return user;
     });
 
+    // Send verification email (outside transaction)
+    try {
+      await sendVerificationEmail(email, verificationCode);
+    } catch (emailError) {
+      logger.error('Email sending failed:', emailError);
+      // Don't fail registration if email fails
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        user: result,
+        message: 'Registration successful. Please check your email for verification code.'
+      }
+    });
   } catch (error) {
+    if (error instanceof Error && error.message === 'User already exists') {
+      return res.status(400).json({
+        success: false,
+        error: 'User already exists'
+      });
+    }
 
-    console.error('Registration error:', error);
-
+    logger.error('Registration error:', error);
     res.status(500).json({
-
       success: false,
-
       error: 'Registration failed'
-
     });
-
   }
-
 };
 
 
@@ -254,7 +205,7 @@ export const login = async (req: Request, res: Response) => {
 
   } catch (error) {
 
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
 
     res.status(500).json({
 
@@ -278,7 +229,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
 
 
-    const verificationData = (global as any).verificationCodes?.[email];
+    const verificationData = await prisma.verificationCode.findUnique({
+
+      where: { email }
+
+    });
+
+
 
     if (!verificationData) {
 
@@ -294,9 +251,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
 
 
-    if (Date.now() > verificationData.expires) {
+    if (Date.now() > verificationData.expiresAt.getTime()) {
 
-      delete (global as any).verificationCodes[email];
+      await prisma.verificationCode.delete({
+
+        where: { email }
+
+      });
 
       return res.status(400).json({
 
@@ -338,7 +299,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     // Clean up verification code
 
-    delete (global as any).verificationCodes[email];
+    await prisma.verificationCode.delete({
+
+      where: { email }
+
+    });
+
+
 
 
 
@@ -380,7 +347,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
   } catch (error) {
 
-    console.error('Verification error:', error);
+    logger.error('Verification error:', error);
 
     res.status(500).json({
 
@@ -444,7 +411,7 @@ export const resendVerification = async (req: Request, res: Response) => {
 
     } catch (emailError) {
 
-      console.error('Email sending failed:', emailError);
+      logger.error('Email sending failed:', emailError);
 
       return res.status(500).json({
 
@@ -458,17 +425,21 @@ export const resendVerification = async (req: Request, res: Response) => {
 
 
 
-    (global as any).verificationCodes[email] = {
-
-      code: verificationCode,
-
-      expires: Date.now() + 10 * 60 * 1000,
-
-      userId: user.id
-
-    };
-
-
+    // Store verification code in database
+    await prisma.verificationCode.upsert({
+      where: { email },
+      update: {
+        code: verificationCode,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      },
+      create: {
+        email,
+        code: verificationCode,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    });
 
     res.json({
 
@@ -480,7 +451,7 @@ export const resendVerification = async (req: Request, res: Response) => {
 
   } catch (error) {
 
-    console.error('Resend verification error:', error);
+    logger.error('Resend verification error:', error);
 
     res.status(500).json({
 
