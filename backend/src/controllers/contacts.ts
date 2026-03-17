@@ -178,6 +178,41 @@ export const acceptContactRequest = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // Auto-create direct chat between the two friends
+    try {
+      // Check if a direct chat already exists
+      let existingChat = await prisma.chat.findFirst({
+        where: {
+          type: 'DIRECT',
+          participants: {
+            every: {
+              userId: {
+                in: [request.userId, req.user.id]
+              }
+            }
+          }
+        }
+      });
+
+      if (!existingChat) {
+        // Create new direct chat
+        existingChat = await prisma.chat.create({
+          data: {
+            type: 'DIRECT',
+            participants: {
+              create: [
+                { userId: request.userId },
+                { userId: req.user.id }
+              ]
+            }
+          }
+        });
+      }
+    } catch (chatError) {
+      // Log error but don't fail the request - friendship is more important than chat
+      console.error('Failed to create chat for new friends:', chatError);
+    }
+
     res.json({
       success: true,
       data: updatedRequest
