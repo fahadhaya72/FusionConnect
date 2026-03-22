@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,12 +17,18 @@ const Login: React.FC = () => {
       return;
     }
     if (result.success) {
-      navigate('/');
+      navigate('/home');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-emerald-500 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-emerald-500 py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <div className="bg-white/20 backdrop-blur rounded-lg p-2">
+          <ThemeToggle />
+        </div>
+      </div>
       <div className="relative max-w-md w-full space-y-8 rounded-3xl border border-white/10 bg-white/60 dark:bg-gray-900/60 backdrop-blur p-10 shadow-2xl">
         <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.7),transparent_60%)]" />
         <div className="relative">

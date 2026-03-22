@@ -11,6 +11,7 @@ export interface ChatSummary {
     time: string;
   };
   unreadCount?: number;
+  createdBy?: string; // ID of user who created the group
 }
 
 export interface Message {
@@ -39,4 +40,29 @@ export const sendChatMessage = async (chatId: string, content: string, type: 'TE
 export const createChat = async (participantIds: string[], name?: string, type: 'DIRECT' | 'GROUP' = 'DIRECT') => {
   const response = await api.post('/chats', { participantIds, name, type });
   return response.data.data as ChatSummary;
+};
+
+export const createGroup = async (name: string, participantIds: string[]) => {
+  const response = await api.post('/chats', { name, participantIds, type: 'GROUP' });
+  return response.data.data as ChatSummary;
+};
+
+export const deleteGroup = async (chatId: string) => {
+  const response = await api.delete(`/chats/${chatId}`);
+  return response.data;
+};
+
+export const kickUser = async (chatId: string, userId: string) => {
+  const response = await api.delete(`/chats/${chatId}/participants/${userId}`);
+  return response.data;
+};
+
+export const muteUser = async (chatId: string, userId: string) => {
+  const response = await api.post(`/chats/${chatId}/mute`, { userId });
+  return response.data;
+};
+
+export const unmuteUser = async (chatId: string, userId: string) => {
+  const response = await api.delete(`/chats/${chatId}/mute/${userId}`);
+  return response.data;
 };

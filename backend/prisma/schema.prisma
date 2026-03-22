@@ -14,7 +14,7 @@ generator client {
 
 datasource db {
 
-  provider = "postgresql"
+  provider = "sqlite"
 
   url      = env("DATABASE_URL")
 
@@ -35,6 +35,8 @@ model User {
   avatar    String?
 
   bio       String?
+
+  role      String   @default("USER") // USER, ADMIN
 
   verified  Boolean  @default(false)
 
@@ -60,6 +62,10 @@ model User {
 
   sentRequests    Contact[] @relation("ContactRequests")
 
+  receivedCalls    Call[] @relation("CallReceiver")
+
+  madeCalls        Call[] @relation("CallCaller")
+
 
 
   @@index([createdAt])                // For sorting users by date
@@ -78,6 +84,8 @@ model Chat {
 
   type      String   @default("DIRECT")
 
+  createdBy  String?   // ID of user who created the group
+
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
@@ -89,8 +97,6 @@ model Chat {
   participants ChatParticipant[]
 
   messages     Message[]
-
-
 
   @@map("chats")
 
@@ -247,6 +253,26 @@ model MeetingParticipant {
 
 }
 
+model Call {
+  id          String   @id @default(uuid()) @map("_id")
+  callerId    String
+  receiverId  String
+  chatId      String?
+  type        String   @default("VOICE") // VOICE, VIDEO
+  status      String   @default("RINGING") // RINGING, CONNECTED, ENDED, MISSED
+  startTime   DateTime @default(now())
+  endTime     DateTime?
+  roomId      String?  // For WebRTC room identification
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  caller    User   @relation("CallCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver  User   @relation("CallReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([callerId, receiverId, createdAt])
+  @@map("calls")
+}
 
 
 model Post {

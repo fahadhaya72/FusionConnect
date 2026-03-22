@@ -43,6 +43,7 @@ export const getChats = async (req: AuthRequest, res: Response) => {
         id: chat.id,
         name: chat.name || otherParticipants.map(p => p.user.name).join(', '),
         type: chat.type,
+        createdBy: chat.createdBy,
         participants: chat.participants.map(p => ({
           id: p.user.id,
           name: p.user.name,
@@ -139,6 +140,7 @@ export const createChat = async (req: AuthRequest, res: Response) => {
       data: {
         name: type === 'GROUP' ? name : null,
         type,
+        createdBy: type === 'GROUP' ? req.user.id : null,
         participants: {
           create: allParticipantIds.map(userId => ({
             userId
@@ -280,6 +282,100 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to send message'
+    });
+  }
+};
+
+export const deleteGroup = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chatId } = req.params;
+
+    // Check if user is the creator of the group
+    const chat = await prisma.chat.findUnique({
+      where: { id: chatId }
+    });
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        error: 'Chat not found'
+      });
+    }
+
+    if (chat.createdBy !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only group creator can delete the group'
+      });
+    }
+
+    // Delete all participants and messages
+    await prisma.chatParticipant.deleteMany({
+      where: { chatId }
+    });
+
+    await prisma.message.deleteMany({
+      where: { chatId }
+    });
+
+    // Delete the chat
+    await prisma.chat.delete({
+      where: { id: chatId }
+    });
+
+    res.json({
+      success: true,
+      message: 'Group deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete group error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete group'
+    });
+  }
+};
+
+export const kickUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const { chatId, userId } = req.params;
+
+    // Check if user is creator of group
+    const chat = await prisma.chat.findUnique({
+      where: { id: chatId }
+    });
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        error: 'Chat not found'
+      });
+    }
+
+    if (chat.createdBy !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only group creator can kick users'
+      });
+    }
+
+    // Remove user from participants
+    await prisma.chatParticipant.deleteMany({
+      where: {
+        chatId,
+        userId
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'User kicked successfully'
+    });
+  } catch (error) {
+    console.error('Kick user error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to kick user'
     });
   }
 };

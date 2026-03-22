@@ -12,6 +12,8 @@ interface AuthRequest extends Request {
 
 }
 
+export { AuthRequest };
+
 
 
 export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -52,7 +54,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
         where: { id: decoded.id },
 
-        select: { id: true, email: true, name: true, avatar: true, verified: true }
+        select: { id: true, email: true, name: true, avatar: true, verified: true, role: true }
 
       });
 

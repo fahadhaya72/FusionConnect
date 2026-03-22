@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HomeIcon, ChatBubbleLeftRightIcon, VideoCameraIcon, UserGroupIcon, Cog6ToothIcon, PhotoIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, ChatBubbleLeftRightIcon, VideoCameraIcon, UserGroupIcon, PhotoIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import useAuth from '../hooks/useAuth';
 
 const Navigation: React.FC = () => {
@@ -8,12 +8,12 @@ const Navigation: React.FC = () => {
   const location = useLocation();
 
   const navItems = [
-    { name: 'Home', path: '/', icon: HomeIcon },
-    { name: 'Chats', path: '/chats', icon: ChatBubbleLeftRightIcon },
-    { name: 'Meetings', path: '/meetings', icon: VideoCameraIcon },
-    { name: 'Contacts', path: '/contacts', icon: UserGroupIcon },
-    { name: 'Posts', path: '/posts', icon: PhotoIcon },
-    { name: 'Profile', path: '/profile', icon: UserCircleIcon },
+    { name: 'Home', path: '/home', icon: HomeIcon },
+    { name: 'Chats', path: '/home/chats', icon: ChatBubbleLeftRightIcon },
+    { name: 'Meetings', path: '/home/meetings', icon: VideoCameraIcon },
+    { name: 'Contacts', path: '/home/contacts', icon: UserGroupIcon },
+    { name: 'Posts', path: '/home/posts', icon: PhotoIcon },
+    { name: 'Profile', path: '/home/profile', icon: UserCircleIcon },
   ];
 
   return (
@@ -26,7 +26,9 @@ const Navigation: React.FC = () => {
         
         <div className="px-2 py-4 space-y-1">
           {navItems.map((item) => {
-            const active = location.pathname === item.path;
+            const active = location.pathname === item.path || 
+                           (item.name === 'Home' && location.pathname === '/home') ||
+                           (item.name !== 'Home' && location.pathname.startsWith(item.path));
             return (
               <Link
                 key={item.name}

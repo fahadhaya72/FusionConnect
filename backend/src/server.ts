@@ -28,6 +28,10 @@ import meetingRoutes from './routes/meetings';
 
 import postRoutes from './routes/posts';
 
+import dashboardRoutes from './routes/dashboard';
+
+import callRoutes from './routes/calls';
+
 import { errorHandler } from './middleware/errorHandler';
 
 import { requestLogger } from './middleware/requestLogger';
@@ -207,6 +211,9 @@ app.use('/api/meetings', meetingRoutes);
 
 app.use('/api/posts', postRoutes);
 
+app.use('/api/dashboard', dashboardRoutes);
+
+app.use('/api/calls', callRoutes);
 
 
 // Health check

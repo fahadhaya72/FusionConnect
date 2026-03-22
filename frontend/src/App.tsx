@@ -4,6 +4,7 @@ import { RootState } from './redux/store';
 import { useAppSelector, useAppDispatch } from './redux/store';
 import { loginSuccess } from './redux/authSlice';
 import MainLayout from './layouts/MainLayout';
+import Landing from './pages/Landing';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -36,7 +37,7 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAppSelector((state: RootState) => state.auth);
   
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   return <>{children}</>;
@@ -68,6 +69,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         {/* Public Routes */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={
           <PublicRoute>
             <Login />
@@ -95,7 +97,7 @@ const App: React.FC = () => {
         } />
         
         {/* Protected Routes */}
-        <Route path="/" element={
+        <Route path="/home" element={
           <ProtectedRoute>
             <MainLayout />
           </ProtectedRoute>
