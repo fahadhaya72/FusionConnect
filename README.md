@@ -205,6 +205,7 @@ backend/
 │   │   ├── posts.ts                 # CRUD /api/posts/* routes
 │   │   ├── chats.ts                 # GET/POST /api/chats/* routes
 │   │   ├── contacts.ts              # Contact management endpoints
+│   │   ├── calls.ts                 # Voice & video call endpoints
 │   │   └── meetings.ts              # Meeting endpoints
 │   │
 │   ├── middleware/
@@ -248,7 +249,7 @@ backend/
 ├── prisma/
 │   └── schema.prisma                # Data model definitions
 │                                     # - Users, Posts, Chats, Messages
-│                                     # - Contacts, Meetings, etc.
+│                                     # - Contacts, Meetings, Calls
 │                                     # - Relations & constraints
 │
 ├── uploads/                         # Static file storage
@@ -296,7 +297,11 @@ frontend/
 │   │   │                             # - User profile display
 │   │   │                             # - Sign in/out buttons
 │   │   │
-│   │   └── ThemeToggle.tsx          # Dark mode/theme switcher
+│   │   ├── ThemeToggle.tsx          # Dark mode/theme switcher
+│   │   └── CallModal.tsx           # Voice & video call modal
+│   │                                 # - Call status display
+│   │                                 # - Answer/reject/end controls
+│   │                                 # - Room ID display for WebRTC
 │   │
 │   ├── layouts/
 │   │   └── MainLayout.tsx           # Primary layout wrapper
@@ -338,6 +343,7 @@ frontend/
 │   │   ├── posts.ts                 # Post API operations
 │   │   ├── chats.ts                 # Chat API operations
 │   │   ├── contacts.ts              # Contact API operations
+│   │   ├── calls.ts                 # Voice & video call API operations
 │   │   ├── meetings.ts              # Meeting API operations
 │   │   └── email.ts                 # Email service (EmailJS)
 │   │
@@ -1237,6 +1243,116 @@ Content-Type: application/json
 }
 
 Response: 201 Created
+```
+
+### Calls Endpoints
+
+#### Create Call
+```http
+POST /api/calls
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "receiverId": "user-uuid",
+  "type": "VOICE", // VOICE or VIDEO
+  "chatId": "chat-uuid" // Optional
+}
+
+Response: 201 Created
+{
+  "success": true,
+  "data": {
+    "id": "call-uuid",
+    "callerId": "caller-uuid",
+    "receiverId": "receiver-uuid",
+    "chatId": "chat-uuid",
+    "type": "VOICE",
+    "status": "RINGING",
+    "startTime": "2026-03-22T11:31:40.577Z",
+    "endTime": null,
+    "roomId": "room_1774179100576_qwod0gudf",
+    "createdAt": "2026-03-22T11:31:40.577Z",
+    "updatedAt": "2026-03-22T11:31:40.577Z",
+    "caller": {
+      "id": "caller-uuid",
+      "name": "Caller Name",
+      "avatar": null
+    },
+    "receiver": {
+      "id": "receiver-uuid", 
+      "name": "Receiver Name",
+      "avatar": null
+    }
+  }
+}
+```
+
+#### Get Call Details
+```http
+GET /api/calls/:callId
+Authorization: Bearer <token>
+
+Response: 200 OK
+{
+  "success": true,
+  "data": {
+    // Call object with all details
+  }
+}
+```
+
+#### Update Call Status
+```http
+PUT /api/calls/:callId/status
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "status": "CONNECTED" // RINGING, CONNECTED, ENDED, MISSED
+}
+
+Response: 200 OK
+{
+  "success": true,
+  "data": {
+    // Updated call object
+  }
+}
+```
+
+#### Get Call History
+```http
+GET /api/calls/history?page=1&limit=20
+Authorization: Bearer <token>
+
+Response: 200 OK
+{
+  "success": true,
+  "data": {
+    "calls": [...], // Array of call objects
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 50,
+      "pages": 3
+    }
+  }
+}
+```
+
+#### End Call
+```http
+POST /api/calls/:callId/end
+Authorization: Bearer <token>
+
+Response: 200 OK
+{
+  "success": true,
+  "data": {
+    // Call object with endTime set
+  }
+}
 ```
 
 ### Posts Endpoints
