@@ -196,6 +196,7 @@ backend/
 │   │   ├── posts.ts                 # Post creation, retrieval, deletion
 │   │   ├── chats.ts                 # Chat management & messaging
 │   │   ├── contacts.ts              # Contact request & relationship logic
+│   │   ├── calls.ts                 # Voice & video call management
 │   │   └── meetings.ts              # Meeting scheduling & management
 │   │
 │   ├── routes/                      # API endpoint definitions
@@ -433,14 +434,24 @@ frontend/
 - **Block Users**: Prevent unwanted contacts (future feature)
 - **Contact Status**: PENDING, ACCEPTED, REJECTED states
 
-### 5. Video Meetings
+### 5. Voice & Video Calls
+- **Call Initiation**: Start voice or video calls with any contact
+- **Unique Room IDs**: Generate WebRTC-compatible room identifiers
+- **Call Status Tracking**: RINGING → CONNECTED → ENDED states
+- **Call History**: View past calls with timestamps
+- **Professional UI**: Dedicated call modal with answer/reject/end controls
+- **WebRTC Ready**: Room IDs ready for peer-to-peer connections
+- **Call Types**: Support for both VOICE and VIDEO calls
+- **Real-time Updates**: Live call status changes via API
+
+### 6. Video Meetings
 - **Meeting Scheduling**: Create meetings with date/time
 - **Participant Management**: Invite users to meetings
 - **Meeting Status**: Track upcoming and past meetings
 - **Meeting Details**: Title, description, attendees
 - **Integration Ready**: Socket.IO ready for WebRTC
 
-### 6. Social Posts
+### 7. Social Posts
 - **Post Creation**: Text + image/video uploads
 - **Post Feed**: Chronological user posts
 - **User Posts**: Filter posts by specific users
